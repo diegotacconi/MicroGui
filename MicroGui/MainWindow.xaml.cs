@@ -31,6 +31,15 @@ namespace MicroGui
             };
         }
 
+        protected override void OnContentRendered(EventArgs e)
+        {
+            base.OnContentRendered(e);
+
+            // Lock the content-fitted height so the window only resizes horizontally.
+            MinHeight = ActualHeight;
+            MaxHeight = ActualHeight;
+        }
+
         private void Browse_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog
