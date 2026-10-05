@@ -105,7 +105,7 @@
                             <TextBlock Text="Completed in 9999.99 s" Visibility="Hidden" />
                             <TextBlock Text="Aborted after 9999.99 s" Visibility="Hidden" />
                             <TextBlock Text="Failed after 9999.99 s" Visibility="Hidden" />
-                            <TextBlock x:Name="StateText" Text="No plan loaded" />
+                            <TextBlock x:Name="StateText" Text="Idle" />
                         </Grid>
                     </StackPanel>
 

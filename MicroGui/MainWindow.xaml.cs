@@ -34,7 +34,7 @@ namespace MicroGui
             InitializeComponent();
             _runTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
             {
-                Interval = TimeSpan.FromMilliseconds(100)
+                Interval = TimeSpan.FromMilliseconds(50)
             };
             _runTimer.Tick += (sender, args) =>
             {
