@@ -1,7 +1,6 @@
 <Window x:Class="MicroGui.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:MicroGui"
         Title="MicroGui" Icon="pack://application:,,,/MicroGui;component/Resources/App.ico"
         SizeToContent="WidthAndHeight" MinWidth="480"
         WindowStartupLocation="CenterScreen">

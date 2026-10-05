@@ -59,9 +59,9 @@ namespace MicroGui
             UpdateControls();
         }
 
-        private void PlanPathBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void PlanPathBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != System.Windows.Input.Key.Enter)
+            if (e.Key != Key.Enter)
                 return;
             e.Handled = true;
             LoadTypedPath();

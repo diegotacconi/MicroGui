@@ -30,21 +30,19 @@ namespace MicroGui
         public event Action<MicroGuiState> StateChanged;
         public MicroGuiState State { get; private set; } = MicroGuiState.Idle;
         public string LoadedPath { get; private set; }
+
         public bool IsRunning
         {
             get
             {
                 lock (_gate)
+                {
                     return _isRunning;
+                }
             }
         }
 
         public bool HasPlan => _plan != null;
-
-        public TestPlanController()
-        {
-
-        }
 
         public void LoadPlan(string path)
         {
