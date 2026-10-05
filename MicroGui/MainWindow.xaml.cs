@@ -1,10 +1,14 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using OpenTap;
 
@@ -13,6 +17,12 @@ namespace MicroGui
     public partial class MainWindow : Window
     {
         private readonly TestPlanController _controller;
+        private readonly Stopwatch _runStopwatch = new Stopwatch();
+        private readonly DispatcherTimer _runTimer;
+        private MicroGuiState _displayState = MicroGuiState.Idle;
+        private bool _runActive;
+        private bool _stopRequested;
+        private string _runOutcome;
         private string _lastAttemptedPath;
         private bool _closeRequested;
         private bool _listenersStopped;
@@ -22,6 +32,17 @@ namespace MicroGui
         public MainWindow(string initialPath)
         {
             InitializeComponent();
+            _runTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+            _runTimer.Tick += (sender, args) =>
+            {
+                if (_runActive)
+                    RefreshStateText();
+                else
+                    _runTimer.Stop();
+            };
             _controller = new TestPlanController();
             _controller.StateChanged += OnStateChanged;
             PlanPathBox.Text = initialPath ?? string.Empty;
@@ -77,7 +98,6 @@ namespace MicroGui
                 return;
 
             _controller.UnloadPlan();
-            StateText.Text = "Idle";
             VerdictText.Text = "Verdict: -";
             UpdateControls();
         }
@@ -149,6 +169,11 @@ namespace MicroGui
 
             HadError = false;
             VerdictText.Text = "Verdict: -";
+            _runOutcome = null;
+            _stopRequested = false;
+            _runActive = true;
+            _runStopwatch.Restart();
+            _runTimer.Start();
 
             try
             {
@@ -156,20 +181,44 @@ namespace MicroGui
                 UpdateControls();
                 var verdict = await run;
                 VerdictText.Text = "Verdict: " + verdict;
+                _runOutcome = _stopRequested || verdict == Verdict.Aborted
+                    ? "Aborted after " + FormatSeconds(_runStopwatch.Elapsed)
+                    : "Completed in " + FormatSeconds(_runStopwatch.Elapsed);
             }
             catch (Exception ex)
             {
                 HadError = true;
+                _runOutcome = "Failed after " + FormatSeconds(_runStopwatch.Elapsed);
+                FinishRunTiming();
                 if (!_closeRequested)
                     MessageBox.Show(this, ex.Message, "Test plan execution failed",
                         MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
+                FinishRunTiming();
                 UpdateControls();
                 if (_closeRequested)
                     Close();
             }
+        }
+
+        private void FinishRunTiming()
+        {
+            if (!_runActive)
+                return;
+            _runStopwatch.Stop();
+            _runTimer.Stop();
+            _runActive = false;
+            // The controller has already left Running/Stopping even if its dispatched notification is still queued.
+            _displayState = _controller.State;
+            RefreshStateText();
+            UpdateActivityRing(_displayState);
+        }
+
+        private static string FormatSeconds(TimeSpan elapsed)
+        {
+            return elapsed.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture) + " s";
         }
 
         private void Stop_Click(object sender, RoutedEventArgs e)
@@ -188,6 +237,20 @@ namespace MicroGui
 
         private void ApplyState(MicroGuiState state)
         {
+            _displayState = state;
+            if (state == MicroGuiState.Stopping)
+                _stopRequested = true;
+            else if (state != MicroGuiState.Running && state != MicroGuiState.Ready)
+                _runOutcome = null;
+
+            RefreshStateText();
+            UpdateActivityRing(state);
+            UpdateControls();
+        }
+
+        private void RefreshStateText()
+        {
+            var state = _displayState;
             if (state == MicroGuiState.LoadFailed && _controller.LoadError != null)
             {
                 var details = FormatLoadError(_controller.FailedLoadPath, _controller.LoadError);
@@ -199,16 +262,59 @@ namespace MicroGui
                 StateText.Foreground = Brushes.Firebrick;
                 StateText.ToolTip = details;
                 AutomationProperties.SetHelpText(StateText, details);
+                return;
+            }
+
+            StateText.ClearValue(TextBlock.ForegroundProperty);
+            StateText.ClearValue(ToolTipProperty);
+            StateText.ClearValue(AutomationProperties.HelpTextProperty);
+
+            if (_runActive && (state == MicroGuiState.Running || state == MicroGuiState.Stopping ||
+                               state == MicroGuiState.Ready))
+            {
+                // A Ready notification can arrive before the awaited run result; keep timing until it does.
+                var elapsed = FormatSeconds(_runStopwatch.Elapsed);
+                StateText.Text = _stopRequested ? "Stopping after " + elapsed : elapsed;
+                return;
+            }
+
+            switch (state)
+            {
+                case MicroGuiState.Idle:
+                    StateText.Text = "Idle";
+                    break;
+                case MicroGuiState.Loading:
+                    StateText.Text = "Loading...";
+                    break;
+                case MicroGuiState.Ready:
+                    StateText.Text = _runOutcome ?? "Ready";
+                    break;
+                default:
+                    StateText.Text = state.ToString();
+                    break;
+            }
+        }
+
+        private void UpdateActivityRing(MicroGuiState state)
+        {
+            var active = state == MicroGuiState.Running || state == MicroGuiState.Stopping;
+            if (active == (ActivityRing.Visibility == Visibility.Visible))
+                return;
+
+            if (active)
+            {
+                ActivityRing.Visibility = Visibility.Visible;
+                var spin = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1)))
+                {
+                    RepeatBehavior = RepeatBehavior.Forever
+                };
+                ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
             }
             else
             {
-                StateText.Text = state.ToString();
-                StateText.ClearValue(TextBlock.ForegroundProperty);
-                StateText.ClearValue(ToolTipProperty);
-                StateText.ClearValue(AutomationProperties.HelpTextProperty);
+                ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+                ActivityRing.Visibility = Visibility.Hidden;
             }
-
-            UpdateControls();
         }
 
         private void UpdateControls()
@@ -244,6 +350,7 @@ namespace MicroGui
             }
             else if (!_listenersStopped)
             {
+                _runTimer.Stop();
                 _controller.Dispose();
                 _listenersStopped = true;
             }
