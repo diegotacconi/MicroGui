@@ -5,7 +5,7 @@
   <SourceUrl>https://github.com/diegotacconi/MicroGui</SourceUrl>
 
   <Dependencies>
-    <PackageDependency Package="OpenTAP" />
+    <PackageDependency Package="OpenTAP" Version="^9.21.0" />
   </Dependencies>
 
   <Files>
