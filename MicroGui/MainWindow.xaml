@@ -4,6 +4,21 @@
         Title="MicroGui" Icon="pack://application:,,,/MicroGui;component/Resources/App.ico"
         SizeToContent="WidthAndHeight" MinWidth="480"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- Button icon style -->
+        <Style x:Key="ButtonIconStyle" TargetType="Image">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.35" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Grid>
 
         <!-- Test Plan panel -->
@@ -16,7 +31,7 @@
                             Padding="10,5" Click="Browse_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Image Source="pack://application:,,,/MicroGui;component/Resources/OpenFolder.64.png"
-                                Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" />
+                                   Style="{StaticResource ButtonIconStyle}" />
                             <TextBlock Text="Browse..." VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -36,8 +51,7 @@
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Text, ElementName=PlanPathBox}"
-                                                    Value="">
+                                        <DataTrigger Binding="{Binding Text, ElementName=PlanPathBox}" Value="">
                                             <Setter Property="Visibility" Value="Visible" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -54,7 +68,7 @@
                             Padding="18,5" Click="Start_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Image Source="pack://application:,,,/MicroGui;component/Resources/Play.64.png"
-                                Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" />
+                                   Style="{StaticResource ButtonIconStyle}" />
                             <TextBlock Text="Start" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -64,7 +78,7 @@
                             Padding="18,5" Margin="8,0,0,0" Click="Stop_Click">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Image Source="pack://application:,,,/MicroGui;component/Resources/Stop.64.png"
-                                Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" />
+                                   Style="{StaticResource ButtonIconStyle}" />
                             <TextBlock Text="Stop" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
