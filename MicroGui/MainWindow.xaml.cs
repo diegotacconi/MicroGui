@@ -19,6 +19,7 @@ namespace MicroGui
         private readonly TestPlanController _controller;
         private readonly Stopwatch _runStopwatch = new Stopwatch();
         private readonly DispatcherTimer _runTimer;
+        private readonly DispatcherTimer _activityDelayTimer;
         private MicroGuiState _displayState = MicroGuiState.Idle;
         private bool _runActive;
         private bool _stopRequested;
@@ -42,6 +43,17 @@ namespace MicroGui
                     RefreshStateText();
                 else
                     _runTimer.Stop();
+            };
+            // The activity ring appears only once a run has lasted longer than this delay.
+            _activityDelayTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(150)
+            };
+            _activityDelayTimer.Tick += (sender, args) =>
+            {
+                _activityDelayTimer.Stop();
+                if (_runActive)
+                    ShowActivityRing();
             };
             _controller = new TestPlanController();
             _controller.StateChanged += OnStateChanged;
@@ -174,6 +186,7 @@ namespace MicroGui
             _runActive = true;
             _runStopwatch.Restart();
             _runTimer.Start();
+            _activityDelayTimer.Start();
 
             try
             {
@@ -209,11 +222,12 @@ namespace MicroGui
                 return;
             _runStopwatch.Stop();
             _runTimer.Stop();
+            _activityDelayTimer.Stop();
             _runActive = false;
             // The controller has already left Running/Stopping even if its dispatched notification is still queued.
             _displayState = _controller.State;
             RefreshStateText();
-            UpdateActivityRing(_displayState);
+            HideActivityRing();
         }
 
         private static string FormatSeconds(TimeSpan elapsed)
@@ -244,7 +258,6 @@ namespace MicroGui
                 _runOutcome = null;
 
             RefreshStateText();
-            UpdateActivityRing(state);
             UpdateControls();
         }
 
@@ -295,26 +308,25 @@ namespace MicroGui
             }
         }
 
-        private void UpdateActivityRing(MicroGuiState state)
+        // Shown by the run's delay timer and hidden when the run finishes; state notifications
+        // (including Running -> Stopping) do not restart the delay.
+        private void ShowActivityRing()
         {
-            var active = state == MicroGuiState.Running || state == MicroGuiState.Stopping;
-            if (active == (ActivityRing.Visibility == Visibility.Visible))
+            if (ActivityRing.Visibility == Visibility.Visible)
                 return;
 
-            if (active)
+            ActivityRing.Visibility = Visibility.Visible;
+            var spin = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1)))
             {
-                ActivityRing.Visibility = Visibility.Visible;
-                var spin = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(1)))
-                {
-                    RepeatBehavior = RepeatBehavior.Forever
-                };
-                ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
-            }
-            else
-            {
-                ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, null);
-                ActivityRing.Visibility = Visibility.Hidden;
-            }
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
+        }
+
+        private void HideActivityRing()
+        {
+            ActivityRingRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+            ActivityRing.Visibility = Visibility.Hidden;
         }
 
         private void UpdateControls()
@@ -351,6 +363,7 @@ namespace MicroGui
             else if (!_listenersStopped)
             {
                 _runTimer.Stop();
+                _activityDelayTimer.Stop();
                 _controller.Dispose();
                 _listenersStopped = true;
             }
