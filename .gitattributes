@@ -1,0 +1,39 @@
+###############################################################################
+# Normalize line endings for all text files.
+# Stored as LF in the repo; checked out as CRLF on Windows.
+###############################################################################
+* text=auto
+
+###############################################################################
+# Force explicit line endings where it matters for tooling.
+###############################################################################
+# Script / shell files stay LF even on Windows:
+*.sh            text eol=lf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# Keep these as CRLF in the working tree on Windows:
+*.sln           text eol=crlf
+*.cs            text eol=crlf
+*.csproj        text eol=crlf
+*.vcxproj       text eol=crlf
+*.props         text eol=crlf
+*.targets       text eol=crlf
+
+###############################################################################
+# Binary files — one line each via the built-in "binary" macro
+# (equivalent to -text -diff -merge). Trim to your actual assets.
+###############################################################################
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.bmp    binary
+*.pdf    binary
+*.zip    binary
+*.7z     binary
+*.dll    binary
+*.exe    binary
+*.pdb    binary
+*.nupkg  binary
