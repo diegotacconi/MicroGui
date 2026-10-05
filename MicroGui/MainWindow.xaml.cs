@@ -1,8 +1,10 @@
 using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Win32;
 using OpenTap;
 
@@ -50,7 +52,10 @@ namespace MicroGui
             };
             if (dialog.ShowDialog(this) == true)
             {
-                PlanPathBox.Text = dialog.FileName;
+                // With no plan loaded, show the chosen path first so a failed load leaves it there to fix.
+                // With a plan loaded, leave the path box alone so a failed load keeps the current plan.
+                if (!_controller.HasPlan)
+                    PlanPathBox.Text = dialog.FileName;
                 LoadPlan(dialog.FileName);
             }
         }
@@ -58,8 +63,17 @@ namespace MicroGui
         private void PlanPathBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             _lastAttemptedPath = null;
-            if (_controller == null || !_controller.HasPlan ||
-                string.Equals(PlanPathBox.Text, _controller.LoadedPath, StringComparison.Ordinal))
+            if (_controller == null)
+                return;
+
+            if (!_controller.HasPlan)
+            {
+                // Editing the path dismisses a previous load failure.
+                _controller.ClearLoadFailure();
+                return;
+            }
+
+            if (string.Equals(PlanPathBox.Text, _controller.LoadedPath, StringComparison.Ordinal))
                 return;
 
             _controller.UnloadPlan();
@@ -73,20 +87,21 @@ namespace MicroGui
             if (e.Key != Key.Enter)
                 return;
             e.Handled = true;
-            LoadTypedPath();
+            // Enter is an explicit request, so retry even a path that already failed.
+            LoadTypedPath(retry: true);
         }
 
         private void PlanPathBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            LoadTypedPath();
+            LoadTypedPath(retry: false);
         }
 
-        private void LoadTypedPath()
+        private void LoadTypedPath(bool retry)
         {
             var path = PlanPathBox.Text;
             if (_controller.IsRunning || _closeRequested || _controller.HasPlan ||
                 string.IsNullOrWhiteSpace(path) ||
-                string.Equals(path, _lastAttemptedPath, StringComparison.Ordinal))
+                (!retry && string.Equals(path, _lastAttemptedPath, StringComparison.Ordinal)))
                 return;
             LoadPlan(path);
         }
@@ -106,13 +121,25 @@ namespace MicroGui
             }
             catch (Exception ex)
             {
+                // The failure is reported through the LoadFailed state in the status area.
                 HadError = true;
                 UpdateControls();
-                Log.CreateSource("MicroGui").Error("Unable to load test plan: {0}", ex);
-                MessageBox.Show(this, ex.Message, "Unable to load test plan",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Log.CreateSource("MicroGui").Error("Unable to load test plan '{0}': {1}", path, ex);
                 return false;
             }
+        }
+
+        internal static string FormatLoadError(string path, Exception ex)
+        {
+            var details = new System.Text.StringBuilder(ex.Message);
+            for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+            {
+                if (!string.IsNullOrWhiteSpace(inner.Message) && !details.ToString().Contains(inner.Message))
+                    details.AppendLine().Append(inner.Message);
+            }
+
+            return "The test plan could not be loaded:" + Environment.NewLine + path +
+                   Environment.NewLine + Environment.NewLine + details;
         }
 
         private async void Start_Click(object sender, RoutedEventArgs e)
@@ -128,9 +155,7 @@ namespace MicroGui
                 var run = _controller.StartAsync();
                 UpdateControls();
                 var verdict = await run;
-                VerdictText.Text = _controller.State == MicroGuiState.Stopped
-                    ? "Verdict: STOPPED"
-                    : "Verdict: " + verdict;
+                VerdictText.Text = "Verdict: " + verdict;
             }
             catch (Exception ex)
             {
@@ -163,7 +188,26 @@ namespace MicroGui
 
         private void ApplyState(MicroGuiState state)
         {
-            StateText.Text = state.ToString();
+            if (state == MicroGuiState.LoadFailed && _controller.LoadError != null)
+            {
+                var details = FormatLoadError(_controller.FailedLoadPath, _controller.LoadError);
+                if (_controller.HasPlan)
+                    details += Environment.NewLine + Environment.NewLine +
+                               "The previous test plan is still loaded:" + Environment.NewLine + _controller.LoadedPath;
+
+                StateText.Text = "Load failed";
+                StateText.Foreground = Brushes.Firebrick;
+                StateText.ToolTip = details;
+                AutomationProperties.SetHelpText(StateText, details);
+            }
+            else
+            {
+                StateText.Text = state.ToString();
+                StateText.ClearValue(TextBlock.ForegroundProperty);
+                StateText.ClearValue(ToolTipProperty);
+                StateText.ClearValue(AutomationProperties.HelpTextProperty);
+            }
+
             UpdateControls();
         }
 

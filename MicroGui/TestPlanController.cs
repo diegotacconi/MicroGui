@@ -6,18 +6,15 @@ using OpenTap;
 
 namespace MicroGui
 {
+    // Test plan lifecycle only; the run outcome is reported separately as an OpenTAP Verdict.
     internal enum MicroGuiState
     {
-        Idle,
-        Loading,
-        Ready,
-        Running,
-        Stopping,
-        Completed,
-        Passed,
-        Failed,
-        Stopped,
-        Error
+        Idle,       // No test plan loaded.
+        Loading,    // A test plan is being loaded.
+        LoadFailed, // The last load attempt failed; any previously loaded plan is kept.
+        Ready,      // A test plan is loaded and can be run.
+        Running,    // The test plan is executing.
+        Stopping    // Stop was requested; waiting for the run to end.
     }
 
     internal sealed class TestPlanController : IDisposable
@@ -30,6 +27,10 @@ namespace MicroGui
         public event Action<MicroGuiState> StateChanged;
         public MicroGuiState State { get; private set; } = MicroGuiState.Idle;
         public string LoadedPath { get; private set; }
+
+        // Set while State is LoadFailed.
+        public string FailedLoadPath { get; private set; }
+        public Exception LoadError { get; private set; }
 
         public bool IsRunning
         {
@@ -66,12 +67,31 @@ namespace MicroGui
                 LoadedPath = fullPath;
                 SetState(MicroGuiState.Ready);
             }
-            catch
+            catch (Exception ex)
             {
-                _plan = null;
-                LoadedPath = null;
-                SetState(MicroGuiState.Error);
+                // A failed load leaves any previously loaded plan in place.
+                FailedLoadPath = TryGetFullPath(path);
+                LoadError = ex;
+                SetState(MicroGuiState.LoadFailed);
                 throw;
+            }
+        }
+
+        public void ClearLoadFailure()
+        {
+            if (State == MicroGuiState.LoadFailed && !IsRunning)
+                SetState(_plan != null ? MicroGuiState.Ready : MicroGuiState.Idle);
+        }
+
+        private static string TryGetFullPath(string path)
+        {
+            try
+            {
+                return Path.GetFullPath(path);
+            }
+            catch (Exception)
+            {
+                return path;
             }
         }
 
@@ -109,21 +129,12 @@ namespace MicroGui
                 _plan.PrintTestPlanRunSummary = true;
                 var run = await _plan.ExecuteAsync(token)
                     .ConfigureAwait(false);
-
-                SetState(token.IsCancellationRequested
-                    ? MicroGuiState.Stopped
-                    : GetStateForVerdict(run.Verdict));
                 return run.Verdict;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                SetState(MicroGuiState.Stopped);
-                return Verdict.Inconclusive;
-            }
-            catch
-            {
-                SetState(MicroGuiState.Error);
-                throw;
+                // OpenTAP normally returns an Aborted run on cancellation.
+                return Verdict.Aborted;
             }
             finally
             {
@@ -133,6 +144,8 @@ namespace MicroGui
                     _runCancellation.Dispose();
                     _runCancellation = null;
                 }
+                // The plan stays loaded after any run outcome, so it is ready to run again.
+                SetState(MicroGuiState.Ready);
             }
         }
 
@@ -149,19 +162,13 @@ namespace MicroGui
             }
         }
 
-        private static MicroGuiState GetStateForVerdict(Verdict verdict)
-        {
-            if (verdict == Verdict.Pass)
-                return MicroGuiState.Passed;
-
-            if (verdict == Verdict.Fail)
-                return MicroGuiState.Failed;
-
-            return MicroGuiState.Completed;
-        }
-
         private void SetState(MicroGuiState state)
         {
+            if (state != MicroGuiState.LoadFailed)
+            {
+                FailedLoadPath = null;
+                LoadError = null;
+            }
             State = state;
             StateChanged?.Invoke(state);
         }
