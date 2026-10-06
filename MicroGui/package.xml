@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<Package Name="MicroGui" Version="0.0.1" OS="Windows" Architecture="AnyCPU" xmlns="http://opentap.io/schemas/package">
+<Package Name="MicroGui" Version="0.0.2" OS="Windows" Architecture="AnyCPU" xmlns="http://opentap.io/schemas/package">
   <Description>Minimal WPF operator window for running OpenTAP plans.</Description>
   <SourceUrl>https://github.com/diegotacconi/MicroGui</SourceUrl>
 
