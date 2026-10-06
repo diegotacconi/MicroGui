@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using OpenTap;
 using OpenTap.Cli;
+using OpenTap.Diagnostic;
 
 namespace MicroGui
 {
@@ -14,6 +17,7 @@ namespace MicroGui
 
         public int Execute(CancellationToken cancellationToken)
         {
+            FilterConsoleLogging();
             if (cancellationToken.IsCancellationRequested)
                 return 1;
 
@@ -48,6 +52,36 @@ namespace MicroGui
             }
 
             return 0;
+        }
+
+        private static void FilterConsoleLogging()
+        {
+            foreach (var listener in Log.GetListeners().OfType<ConsoleTraceListener>().ToArray())
+            {
+                Log.RemoveListener(listener);
+                Log.AddListener(new ErrorOnlyConsoleListener(listener));
+            }
+        }
+
+        private sealed class ErrorOnlyConsoleListener : ILogListener
+        {
+            private readonly ConsoleTraceListener _listener;
+
+            public ErrorOnlyConsoleListener(ConsoleTraceListener listener)
+            {
+                _listener = listener;
+            }
+
+            public void EventsLogged(IEnumerable<Event> events)
+            {
+                _listener.TraceEvents(events.Where(logEvent =>
+                    logEvent.EventType == (int)LogEventType.Error));
+            }
+
+            public void Flush()
+            {
+                _listener.Flush();
+            }
         }
     }
 }
