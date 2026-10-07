@@ -33,7 +33,7 @@ namespace MicroGui
         {
             InitializeComponent();
             var version = GetAssemblyVersion();
-            Title = version is null ? "MicroGui" : $"MicroGui {version}";
+            Title = version is null ? "MicroGui" : $"MicroGui (v{version})";
             _runTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
             {
                 Interval = TimeSpan.FromMilliseconds(50)

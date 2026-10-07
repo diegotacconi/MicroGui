@@ -1,11 +1,22 @@
-# This file is the source of truth for the MicroGui PACKAGE version.
+# Source of truth for the MicroGui PACKAGE version.
 #
-# The OpenTAP SDK's "tap sdk gitversion" command (and the $(GitVersion) macro
-# in package.xml) computes the final package version from the base "version"
-# below plus the git history:
-#   - building from the default (beta) branch yields a "-beta.N" prerelease,
-#     where N counts commits since the last change to "version",
-#   - a commit carrying a matching annotated tag yields a clean release.
+# The $(GitVersion) macro in package.xml is resolved by the OpenTAP SDK
+# ("tap sdk gitversion") from the base "version" below plus the git history:
+#
+#   * A commit on the default (beta) branch that is NOT tagged gets a
+#     "-beta.N" prerelease, where N counts commits since the last change to
+#     "version".
+#   * A commit carrying an annotated tag (v<major>.<minor>.<patch>) gets a
+#     clean release with no prerelease suffix.
+#
+# The 8-char commit hash is always appended as build metadata (+<hash>).
+#
+# Example — the same commit, before and after tagging:
+#
+#   untagged:  MicroGui.0.0.3-beta.4+b4d59198.TapPackage
+#   tagged:    git tag -a v0.0.3   ->   MicroGui.0.0.3+b4d59198.TapPackage
+#
+# So to ship a release, tag the commit; the "-beta.N" part disappears.
 #
 # NOTE: the value must be on the SAME line as "version =" (the parser reads
 # "key = value" per line). Keep the base value in sync with the <Version>
@@ -13,9 +24,9 @@
 # the build output).
 version = 0.0.3
 
-# A version is a "beta" prerelease when it originates from the default branch.
+# Commits from this branch are treated as prereleases ("-beta.N").
 beta branch = main
 
-# A version is a clean release (no prerelease suffix) when it originates from
-# a commit carrying an annotated tag matching the SDK default pattern
-# (v<major>.<minor>.<patch>), so no "release tag" override is needed.
+# A commit is a clean release when it carries an annotated tag matching the
+# SDK default pattern (v<major>.<minor>.<patch>), so no "release tag" override
+# is needed.
