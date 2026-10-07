@@ -77,12 +77,6 @@ namespace MicroGui
             }
         }
 
-        public void ClearLoadFailure()
-        {
-            if (State == MicroGuiState.LoadFailed && !IsRunning)
-                SetState(_plan != null ? MicroGuiState.Ready : MicroGuiState.Idle);
-        }
-
         private static string TryGetFullPath(string path)
         {
             try
