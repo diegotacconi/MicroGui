@@ -162,14 +162,14 @@ namespace MicroGui
                 UpdateControls();
                 var verdict = await run;
                 VerdictText.Text = "Verdict: " + verdict;
-                _runOutcome = _stopRequested || verdict == Verdict.Aborted
-                    ? "Aborted after " + FormatSeconds(_runStopwatch.Elapsed)
-                    : "Completed in " + FormatSeconds(_runStopwatch.Elapsed);
+                _runOutcome = FormatRunOutcome(
+                    _stopRequested || verdict == Verdict.Aborted ? "Aborted after " : "Completed in ",
+                    GetFinalLocalElapsed(), _controller.LastRunDuration);
             }
             catch (Exception ex)
             {
                 HadError = true;
-                _runOutcome = "Failed after " + FormatSeconds(_runStopwatch.Elapsed);
+                _runOutcome = FormatRunOutcome("Failed after ", GetFinalLocalElapsed(), _controller.LastRunDuration);
                 FinishRunTiming();
                 if (!_closeRequested)
                     MessageBox.Show(this, ex.Message, "Test plan execution failed",
@@ -201,6 +201,36 @@ namespace MicroGui
         private static string FormatSeconds(TimeSpan elapsed)
         {
             return elapsed.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture) + " s";
+        }
+
+        // Live value refreshed by _runTimer: measured over OpenTAP's own run interval, so it reads 0 until
+        // OpenTAP starts timing and freezes when OpenTAP stops timing (before resources finish closing).
+        private TimeSpan GetLiveElapsed()
+        {
+            return _controller.GetAlignedElapsed() ?? TimeSpan.Zero;
+        }
+
+        // Falls back to the click-to-return stopwatch if OpenTAP never started timing (e.g. it threw early).
+        private TimeSpan GetFinalLocalElapsed()
+        {
+            return _controller.GetAlignedElapsed() ?? _runStopwatch.Elapsed;
+        }
+
+        // Local and OpenTAP times closer than this are treated as the same and only the OpenTAP value is shown.
+        private static readonly TimeSpan ElapsedDisplayTolerance = TimeSpan.FromMilliseconds(500);
+
+        // Prefers the duration OpenTAP reported; adds the local time only when it differs by at least the tolerance.
+        // Falls back to the local time when OpenTAP reported no duration.
+        internal static string FormatRunOutcome(string prefix, TimeSpan localElapsed, TimeSpan? reportedDuration)
+        {
+            var local = FormatSeconds(localElapsed);
+            if (!reportedDuration.HasValue)
+                return prefix + local;
+
+            var reported = FormatSeconds(reportedDuration.Value);
+            return (localElapsed - reportedDuration.Value).Duration() < ElapsedDisplayTolerance
+                ? prefix + reported
+                : prefix + local + " (engine: " + reported + ")";
         }
 
         private void Stop_Click(object sender, RoutedEventArgs e)
@@ -254,7 +284,7 @@ namespace MicroGui
                                state == TestPlanState.Ready))
             {
                 // A Ready notification can arrive before the awaited run result; keep timing until it does.
-                var elapsed = FormatSeconds(_runStopwatch.Elapsed);
+                var elapsed = FormatSeconds(GetLiveElapsed());
                 StateText.Text = _stopRequested ? "Stopping after " + elapsed : elapsed;
                 return;
             }
