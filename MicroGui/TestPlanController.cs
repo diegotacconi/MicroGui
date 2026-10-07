@@ -6,7 +6,6 @@ using OpenTap;
 
 namespace MicroGui
 {
-    // Test plan lifecycle only; the run outcome is reported separately as an OpenTAP Verdict.
     internal enum TestPlanState
     {
         Idle,       // No test plan loaded.
