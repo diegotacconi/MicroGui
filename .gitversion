@@ -17,5 +17,5 @@ version = 0.0.3
 beta branch = main
 
 # A version is a clean release (no prerelease suffix) when it originates from
-# a commit carrying an annotated tag matching this pattern.
-release tag = v\d+\.\d+\.\d+
+# a commit carrying an annotated tag matching the SDK default pattern
+# (v<major>.<minor>.<patch>), so no "release tag" override is needed.
