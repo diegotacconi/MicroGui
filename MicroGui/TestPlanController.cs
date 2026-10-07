@@ -7,7 +7,7 @@ using OpenTap;
 namespace MicroGui
 {
     // Test plan lifecycle only; the run outcome is reported separately as an OpenTAP Verdict.
-    internal enum MicroGuiState
+    internal enum TestPlanState
     {
         Idle,       // No test plan loaded.
         Loading,    // A test plan is being loaded.
@@ -24,8 +24,8 @@ namespace MicroGui
         private CancellationTokenSource _runCancellation;
         private bool _isRunning;
         private bool _disposed;
-        public event Action<MicroGuiState> StateChanged;
-        public MicroGuiState State { get; private set; } = MicroGuiState.Idle;
+        public event Action<TestPlanState> StateChanged;
+        public TestPlanState State { get; private set; } = TestPlanState.Idle;
         public string LoadedPath { get; private set; }
 
         // Set while State is LoadFailed.
@@ -50,7 +50,7 @@ namespace MicroGui
             if (IsRunning)
                 throw new InvalidOperationException("A test plan cannot be loaded while a run is active.");
 
-            SetState(MicroGuiState.Loading);
+            SetState(TestPlanState.Loading);
             try
             {
                 var fullPath = Path.GetFullPath(path);
@@ -65,14 +65,14 @@ namespace MicroGui
 
                 _plan = plan;
                 LoadedPath = fullPath;
-                SetState(MicroGuiState.Ready);
+                SetState(TestPlanState.Ready);
             }
             catch (Exception ex)
             {
                 // A failed load leaves any previously loaded plan in place.
                 FailedLoadPath = TryGetFullPath(path);
                 LoadError = ex;
-                SetState(MicroGuiState.LoadFailed);
+                SetState(TestPlanState.LoadFailed);
                 throw;
             }
         }
@@ -96,7 +96,7 @@ namespace MicroGui
 
             _plan = null;
             LoadedPath = null;
-            SetState(MicroGuiState.Idle);
+            SetState(TestPlanState.Idle);
         }
 
         public async Task<Verdict> StartAsync()
@@ -117,7 +117,7 @@ namespace MicroGui
                 token = _runCancellation.Token;
             }
 
-            SetState(MicroGuiState.Running);
+            SetState(TestPlanState.Running);
             try
             {
                 _plan.PrintTestPlanRunSummary = true;
@@ -139,7 +139,7 @@ namespace MicroGui
                     _runCancellation = null;
                 }
                 // The plan stays loaded after any run outcome, so it is ready to run again.
-                SetState(MicroGuiState.Ready);
+                SetState(TestPlanState.Ready);
             }
         }
 
@@ -150,15 +150,15 @@ namespace MicroGui
                 if (!_isRunning || _runCancellation == null || _runCancellation.IsCancellationRequested)
                     return false;
 
-                SetState(MicroGuiState.Stopping);
+                SetState(TestPlanState.Stopping);
                 _runCancellation.Cancel();
                 return true;
             }
         }
 
-        private void SetState(MicroGuiState state)
+        private void SetState(TestPlanState state)
         {
-            if (state != MicroGuiState.LoadFailed)
+            if (state != TestPlanState.LoadFailed)
             {
                 FailedLoadPath = null;
                 LoadError = null;

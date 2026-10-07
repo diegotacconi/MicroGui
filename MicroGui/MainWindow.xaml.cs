@@ -20,7 +20,7 @@ namespace MicroGui
         private readonly Stopwatch _runStopwatch = new Stopwatch();
         private readonly DispatcherTimer _runTimer;
         private readonly DispatcherTimer _activityDelayTimer;
-        private MicroGuiState _displayState = MicroGuiState.Idle;
+        private TestPlanState _displayState = TestPlanState.Idle;
         private bool _runActive;
         private bool _stopRequested;
         private string _runOutcome;
@@ -209,7 +209,7 @@ namespace MicroGui
             UpdateControls();
         }
 
-        private void OnStateChanged(MicroGuiState state)
+        private void OnStateChanged(TestPlanState state)
         {
             if (Dispatcher.CheckAccess())
                 ApplyState(state);
@@ -217,12 +217,12 @@ namespace MicroGui
                 Dispatcher.BeginInvoke(new Action(() => ApplyState(state)));
         }
 
-        private void ApplyState(MicroGuiState state)
+        private void ApplyState(TestPlanState state)
         {
             _displayState = state;
-            if (state == MicroGuiState.Stopping)
+            if (state == TestPlanState.Stopping)
                 _stopRequested = true;
-            else if (state != MicroGuiState.Running && state != MicroGuiState.Ready)
+            else if (state != TestPlanState.Running && state != TestPlanState.Ready)
                 _runOutcome = null;
 
             RefreshStateText();
@@ -232,7 +232,7 @@ namespace MicroGui
         private void RefreshStateText()
         {
             var state = _displayState;
-            if (state == MicroGuiState.LoadFailed && _controller.LoadError != null)
+            if (state == TestPlanState.LoadFailed && _controller.LoadError != null)
             {
                 var details = FormatLoadError(_controller.FailedLoadPath, _controller.LoadError);
                 if (_controller.HasPlan)
@@ -250,8 +250,8 @@ namespace MicroGui
             StateText.ClearValue(ToolTipProperty);
             StateText.ClearValue(AutomationProperties.HelpTextProperty);
 
-            if (_runActive && (state == MicroGuiState.Running || state == MicroGuiState.Stopping ||
-                               state == MicroGuiState.Ready))
+            if (_runActive && (state == TestPlanState.Running || state == TestPlanState.Stopping ||
+                               state == TestPlanState.Ready))
             {
                 // A Ready notification can arrive before the awaited run result; keep timing until it does.
                 var elapsed = FormatSeconds(_runStopwatch.Elapsed);
@@ -261,13 +261,13 @@ namespace MicroGui
 
             switch (state)
             {
-                case MicroGuiState.Idle:
+                case TestPlanState.Idle:
                     StateText.Text = "Idle";
                     break;
-                case MicroGuiState.Loading:
+                case TestPlanState.Loading:
                     StateText.Text = "Loading...";
                     break;
-                case MicroGuiState.Ready:
+                case TestPlanState.Ready:
                     StateText.Text = _runOutcome ?? "Ready";
                     break;
                 default:
@@ -305,7 +305,7 @@ namespace MicroGui
             StartButton.IsEnabled = _controller.HasPlan && !_controller.IsRunning && !_closeRequested;
             BrowseButton.IsEnabled = !_controller.IsRunning && !_closeRequested;
             PlanPathBox.IsEnabled = !_controller.IsRunning && !_closeRequested;
-            StopButton.IsEnabled = _controller.IsRunning && _controller.State == MicroGuiState.Running;
+            StopButton.IsEnabled = _controller.IsRunning && _controller.State == TestPlanState.Running;
         }
 
         public void RequestShutdown()
