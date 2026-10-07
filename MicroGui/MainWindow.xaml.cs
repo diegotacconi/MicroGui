@@ -32,7 +32,8 @@ namespace MicroGui
         public MainWindow(string initialPath)
         {
             InitializeComponent();
-            Title = $"MicroGui {GetAssemblyVersion()}";
+            var version = GetAssemblyVersion();
+            Title = version is null ? "MicroGui" : $"MicroGui {version}";
             _runTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
             {
                 Interval = TimeSpan.FromMilliseconds(50)
@@ -75,12 +76,18 @@ namespace MicroGui
             MaxHeight = ActualHeight;
         }
 
+        /// <summary>
+        /// Returns the assembly's informational version (from the csproj
+        /// <c>Version</c>), with any build-metadata suffix stripped, or
+        /// <c>null</c> if it is not available.
+        /// </summary>
         private static string GetAssemblyVersion()
         {
-            // Read from the the assembly's informational version
+            // Read from the assembly, not the type: the attribute is assembly-level
+            // and non-inherited, so a type lookup would always return null.
             var version = typeof(MainWindow).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            return version?.Split(new[] { '+' }, 2)[0] ?? "0.0.0";
+            return version?.Split(new[] { '+' }, 2)[0];
         }
 
         private void Browse_Click(object sender, RoutedEventArgs e)
