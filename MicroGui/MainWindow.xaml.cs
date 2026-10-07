@@ -75,19 +75,11 @@ namespace MicroGui
             MaxHeight = ActualHeight;
         }
 
-        /// <summary>
-        /// Returns the version stamped into the assembly by MSBuild (the
-        /// <c>Version</c> property in the .csproj), so the title bar always
-        /// matches the version used to build the OpenTAP package.
-        /// </summary>
         private static string GetAssemblyVersion()
         {
-            // The attribute lives on the assembly, not on any type (and it is
-            // non-inherited), so it must be read from the assembly itself.
+            // Read from the the assembly's informational version
             var version = typeof(MainWindow).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            // The informational version may carry a build-metadata suffix (e.g. "0.0.3+abc123");
-            // keep only the semantic version for the title bar.
             return version?.Split(new[] { '+' }, 2)[0] ?? "0.0.0";
         }
 
