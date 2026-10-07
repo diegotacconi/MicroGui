@@ -5,8 +5,10 @@
     <UseWPF>true</UseWPF>
     <Deterministic>True</Deterministic>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <!-- Title-bar version when running from build output. Keep in sync with
-         .gitversion (package version); package installs override this. -->
+    <!-- Assembly version, shown in the title bar when running from build output.
+         The PACKAGE version is defined in .gitversion (source of truth) and is
+         stamped over this at install time via <SetAssemblyInfo> in package.xml.
+         Keep the base value in sync with .gitversion so dev builds match. -->
     <Version>0.0.3</Version>
     <OpenTapPackageDefinitionPath>package.xml</OpenTapPackageDefinitionPath>
     <CreateOpenTapPackage>true</CreateOpenTapPackage>
