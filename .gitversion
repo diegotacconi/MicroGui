@@ -1,0 +1,20 @@
+# This file is the source of truth for the MicroGui PACKAGE version.
+#
+# The OpenTAP SDK's "tap sdk gitversion" command (and the $(GitVersion) macro
+# in package.xml) computes the final package version from the base "version"
+# below plus the git history:
+#   - building from the default (beta) branch yields a "-beta.N" prerelease,
+#     where N counts commits since the last change to "version",
+#   - a commit carrying a matching annotated tag yields a clean release.
+#
+# Keep the base value in sync with the <Version> property in MicroGui.csproj
+# (which drives the title bar when running from the build output).
+version =
+0\.0\.3
+
+# A version is a "beta" prerelease when it originates from the default branch.
+beta branch = main
+
+# A version is a clean release (no prerelease suffix) when it originates from
+# a commit carrying an annotated tag matching this pattern.
+release tag = v\d+\.\d+\.\d+
