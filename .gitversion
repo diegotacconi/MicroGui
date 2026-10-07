@@ -7,10 +7,11 @@
 #     where N counts commits since the last change to "version",
 #   - a commit carrying a matching annotated tag yields a clean release.
 #
-# Keep the base value in sync with the <Version> property in MicroGui.csproj
-# (which drives the title bar when running from the build output).
-version =
-0\.0\.3
+# NOTE: the value must be on the SAME line as "version =" (the parser reads
+# "key = value" per line). Keep the base value in sync with the <Version>
+# property in MicroGui.csproj (which drives the title bar when running from
+# the build output).
+version = 0.0.3
 
 # A version is a "beta" prerelease when it originates from the default branch.
 beta branch = main
